@@ -49,7 +49,7 @@ const request = async (method, url, data) => api({ method, url, data });
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
+  const [role, setRole] = useState("student");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -186,7 +186,7 @@ export const AuthProvider = ({ children }) => {
       // ignore
     } finally {
       setUser(null);
-      setRole(null);
+      setRole("student");
       setIsAuthenticated(false);
       setRegistrationStep("register");
       setLastRegisteredEmail(null);

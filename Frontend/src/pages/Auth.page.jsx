@@ -22,6 +22,11 @@ const AuthPage = () => {
     verifyOtp,
   } = useAuth();
 
+  // Default role: Student
+  useEffect(() => {
+    if (!role) setRole('student');
+  }, [role, setRole]);
+
   // Theme State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
 
@@ -127,15 +132,18 @@ const AuthPage = () => {
   };
 
   const handleGoogleLogin = () => {
+    if (!role) {
+      const message = 'Please select Student or Alumni.';
+      setValidationError(message);
+      toast.error(message);
+      return;
+    }
+
     // Redirect to backend Google Auth endpoint
-    // Assuming backend is on localhost:2804
-    const endpoint = role === 'alumni' 
-        ? import.meta.env.VITE_GOOGLE_URL1
-        : import.meta.env.VITE_GOOGLE_URL2 // Maybe student google not implemented? Controller showed alumni has it.
-    // Wait, the context showed alumni.routes has /google, student.routes currently DOES NOT. 
-    // So if role is student, Google might not work or default to Alumni logic?
-    // For now I'll point both to alumni or just handle generic google login.
-    // But backend redirect hardcodes /dashboard (not used in SPA). Ensure links point to /profile.
+    const endpoint = role === 'alumni'
+      ? import.meta.env.VITE_GOOGLE_URL1
+      : import.meta.env.VITE_GOOGLE_URL2;
+
     if (!endpoint) {
       const message = 'Google login is not configured for this role.';
       setValidationError(message);
@@ -329,7 +337,7 @@ const AuthPage = () => {
             </div>
           </form>
 
-          {(view === 'login' || view === 'register') && role === 'alumni' && (
+          {(view === 'login' || view === 'register') && (role === 'alumni' || role === 'student') && (
             <div className="mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
