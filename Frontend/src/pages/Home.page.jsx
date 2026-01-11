@@ -161,8 +161,12 @@ export const Home = () => {
             <video
               className="w-full h-full object-cover"
               src={heroVideoUrl}
-              controls
-              preload="metadata"
+              {/* controls
+              preload="metadata" */}
+              autoPlay
+              loop
+              muted
+              playsInline
             />
           </div>
         </div>
