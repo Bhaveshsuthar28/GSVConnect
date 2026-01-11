@@ -1,4 +1,5 @@
-import {Route , Routes} from "react-router-dom"
+import { Route, Routes, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { Home } from "./pages/Home.page.jsx"
 import AuthPage from "./pages/Auth.page.jsx"
 import ProfilePage from "./pages/Profile.page.jsx"
@@ -8,8 +9,38 @@ import EventsPage from "./pages/Events.page.jsx"
 import StoriesPage from "./pages/Stories.page.jsx"
 import JobsPage from "./pages/Jobs.page.jsx"
 import AboutPage from "./pages/About.page.jsx"
+import { useAuth } from "./context/AuthContext.jsx";
 
 const App = () => {
+  const location = useLocation();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const appName = "GSVConnect";
+    const pathname = location.pathname || "/";
+
+    const baseTitleMap = {
+      "/": "Home",
+      "/auth": "Auth",
+      "/directory": "Directory",
+      "/events": "Events",
+      "/stories": "Stories",
+      "/jobs": "Jobs",
+      "/about": "About",
+    };
+
+    if (pathname === "/profile") {
+      const name = user?.name?.trim();
+      document.title = name
+        ? `${appName} | Profile - ${name}`
+        : `${appName} | Profile`;
+      return;
+    }
+
+    const page = baseTitleMap[pathname];
+    document.title = page ? `${appName} | ${page}` : appName;
+  }, [location.pathname, user?.name]);
+
   return (
     <>
       <Routes>
