@@ -24,7 +24,7 @@ app.use(passport.initialize());
 app.use(cookieParser());
 
 const allowedOrigins = (() => {
-    const defaults = ["http://localhost:5173"];
+    const defaults = ["https://gsv-connect.vercel.app"];
     const configured = (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "")
         .split(",")
         .map((s) => s.trim())
