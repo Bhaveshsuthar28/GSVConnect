@@ -1,5 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useState } from "react";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 import {
   Home,
   Users,
@@ -21,6 +23,7 @@ const navLinks = [
 
 export const MobileSidebar = ({ open, onClose }) => {
   const { isAuthenticated, user, logout } = useAuth();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const links = isAuthenticated
     ? [...navLinks, { name: "Stories", path: "/stories", icon: PenSquare }, { name: "Jobs", path: "/jobs", icon: Briefcase }]
     : navLinks;
@@ -28,8 +31,7 @@ export const MobileSidebar = ({ open, onClose }) => {
   if (!open) return null;
 
   const handleLogout = () => {
-    logout();
-    onClose();
+    setShowLogoutConfirm(true);
   };
 
   return (
@@ -172,6 +174,20 @@ export const MobileSidebar = ({ open, onClose }) => {
           </NavLink>
         )}
       </aside>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        confirmText="Confirm"
+        cancelText="Cancel"
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          logout();
+          onClose();
+        }}
+      />
     </div>
   );
 };

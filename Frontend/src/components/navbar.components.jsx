@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { toggleTheme } from "../features/theme.js";
 import { MobileSidebar } from "./moblie.sidebar.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 
 const navLinks = [
   { name: "Home", path: "/" },
@@ -18,6 +19,7 @@ export const Navbar = () => {
   );
   const [open, setOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const dropdownRef = useRef(null);
 
   const { isAuthenticated, user, logout } = useAuth();
@@ -43,8 +45,7 @@ export const Navbar = () => {
   };
 
   const handleLogout = () => {
-    logout();
-    setShowDropdown(false);
+    setShowLogoutConfirm(true);
   };
 
   return (
@@ -197,6 +198,20 @@ export const Navbar = () => {
       </nav>
 
       <MobileSidebar open={open} onClose={() => setOpen(false)} />
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        confirmText="Confirm"
+        cancelText="Cancel"
+        onCancel={() => setShowLogoutConfirm(false)}
+        onConfirm={() => {
+          setShowLogoutConfirm(false);
+          setShowDropdown(false);
+          logout();
+        }}
+      />
     </>
   );
 };
