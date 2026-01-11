@@ -1,11 +1,11 @@
 import Otp from "./otp.model.js";
 import { transporter } from "../../config/email.config.js";
-import crypto from "crypto";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const RESEND_MIN_INTERVAL_MS = 60 * 1000;
 
-const hashOtp = (otp) => crypto.createHash("sha256").update(String(otp)).digest("hex");
+const generateOtp = () => String(Math.floor(100000 + Math.random() * 900000));
+const normalizeOtp = (value) => String(value ?? "").trim();
 
 export const sendOtp = async (email) => {
     const normalizedEmail = String(email || "").trim().toLowerCase();
@@ -22,12 +22,14 @@ export const sendOtp = async (email) => {
         throw err;
     }
 
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    const otp = generateOtp();
 
     await Otp.deleteMany({ email: normalizedEmail });
     await Otp.create({
         email: normalizedEmail,
-        otpHash: hashOtp(otp),
+        // Stored as plain text (crypto-free) to avoid runtime crypto issues.
+        // Field name is kept for backward compatibility with the existing schema.
+        otpHash: otp,
         expiresAt: new Date(Date.now() + OTP_TTL_MS),
     });
 
@@ -50,8 +52,8 @@ export const verifyOtp = async (email, otp) => {
     const record = await Otp.findOne({ email: normalizedEmail }).sort({ createdAt: -1 });
     if (!record || record.expiresAt < new Date()) return false;
 
-    const providedHash = hashOtp(otp);
-    if (providedHash !== record.otpHash) return false;
+    const providedOtp = normalizeOtp(otp);
+    if (!providedOtp || providedOtp !== String(record.otpHash)) return false;
 
     await Otp.deleteMany({ email: normalizedEmail });
     return true;
