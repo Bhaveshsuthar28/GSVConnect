@@ -3,6 +3,21 @@ import Student from "./students.models.js";
 import { sendOtp, verifyOtp } from "../../shared/Otp/otp.service.js";
 import { generateTokens } from "../../shared/auth/token.js";
 import { imageKit } from "../../config/image.config.js";
+import { getAuthCookieOptions } from "../../shared/auth/cookies.js";
+
+const normalizeValue = (value) => {
+    if (value === undefined) return undefined;
+    if (value === "") return null;
+    return value;
+};
+
+const normalizeNumber = (value) => {
+    if (value === undefined) return undefined;
+    if (value === "") return null;
+    const num = Number(value);
+    if (Number.isNaN(num)) return { error: "graduationYear must be a number" };
+    return num;
+};
 
 export const registerStudent = async (req, res) => {
     try {
@@ -53,7 +68,8 @@ export const registerStudent = async (req, res) => {
         res.status(201).json({ message: "Registration successful. OTP sent to your email." });
     } catch (error) {
         console.error("Student Register Error:", error);
-        res.status(500).json({ message: error.message });
+        const status = error?.status || 500;
+        res.status(status).json({ message: status === 500 ? "Registration failed." : error.message });
     }
 };
 
@@ -75,22 +91,22 @@ export const verifyStudentEmail = async (req, res) => {
         const payload = { id: student._id, email: student.email, name: student.name, role: 'student' };
         const tokens = generateTokens(payload);
 
+        const cookieOptions = getAuthCookieOptions();
+
         res.cookie("accessToken", tokens.accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            ...cookieOptions,
             maxAge: 40 * 60 * 1000, 
         });
 
         res.cookie("refreshToken", tokens.refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            ...cookieOptions,
             maxAge: 15 * 24 * 60 * 60 * 1000, 
         });
 
-        res.json({ message: "Email verified successfully.", ...tokens });
+        res.json({ message: "Email verified successfully.", role: "student" });
     } catch (error) {
         console.error("Student Verify Error:", error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: "Verification failed." });
     }
 };
 
@@ -110,22 +126,22 @@ export const loginStudent = async (req, res) => {
         const payload = { id: student._id, email: student.email, name: student.name, role: 'student' };
         const tokens = generateTokens(payload);
 
+        const cookieOptions = getAuthCookieOptions();
+
         res.cookie("accessToken", tokens.accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            ...cookieOptions,
             maxAge: 40 * 60 * 1000, // 40 minutes calls
         });
 
         res.cookie("refreshToken", tokens.refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            ...cookieOptions,
             maxAge: 15 * 24 * 60 * 60 * 1000, // 15 days
         });
 
-        res.json({ message: "Login successful", ...tokens });
+        res.json({ message: "Login successful", role: "student" });
     } catch (error) {
         console.error("Student Login Error:", error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: "Login failed." });
     }
 };
 
@@ -140,20 +156,60 @@ export const getStudentProfile = async (req, res) => {
 };
 
 export const updateStudentProfile = async (req, res) => {
-    const { name } = req.body;
-    const studentId = req.user._id;
-
-    const updateData = {};
-    if (name) {
-        updateData.name = name;
-    }
-
     try {
-        if (req.file) {
+        if (req.user?.role !== 'student') {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
+        const studentId = req.user._id;
+        const updateData = {};
+
+        const stringFields = ["name", "phone", "address", "portfolioUrl", "linkedinId", "degree", "branch"];
+        stringFields.forEach((field) => {
+            const normalized = normalizeValue(req.body?.[field]);
+            if (normalized !== undefined) updateData[field] = normalized;
+        });
+
+        if (req.body?.cgpa !== undefined) {
+            const cgpaVal = req.body.cgpa === "" ? null : Number(req.body.cgpa);
+            if (cgpaVal !== null) {
+                if (Number.isNaN(cgpaVal) || cgpaVal < 0 || cgpaVal > 10) {
+                    return res.status(400).json({ message: "CGPA must be a number between 0 and 10." });
+                }
+            }
+            updateData.cgpa = cgpaVal;
+        }
+
+        // Skills can arrive as comma-separated string or JSON array
+        if (req.body?.skills !== undefined) {
+            let skills = req.body.skills;
+            if (typeof skills === "string") {
+                if (skills.trim() === "") {
+                    skills = [];
+                } else {
+                    try {
+                        // Accept JSON array string or comma separated
+                        skills = skills.trim().startsWith("[") ? JSON.parse(skills) : skills.split(",").map((s) => s.trim()).filter(Boolean);
+                    } catch (parseErr) {
+                        return res.status(400).json({ message: "Invalid skills format." });
+                    }
+                }
+            }
+
+            if (!Array.isArray(skills)) {
+                return res.status(400).json({ message: "Skills must be an array." });
+            }
+
+            updateData.skills = skills;
+        }
+
+        const profileFile = req.file || req.files?.profileImage?.[0];
+        if (profileFile) {
             const uploadResponse = await imageKit.upload({
-                file: req.file.buffer,
-                fileName: `profile_${studentId}`,
+                file: profileFile.buffer,
+                fileName: `student_profile_${studentId}_${Date.now()}`,
                 folder: "student_profiles",
+                useUniqueFileName: true,
             });
             updateData.profileImage = uploadResponse.url;
         }
@@ -168,9 +224,10 @@ export const updateStudentProfile = async (req, res) => {
             return res.status(404).json({ message: "Student not found." });
         }
 
-        res.json(updatedStudent);
+        res.json({ ...updatedStudent.toObject(), role: "student" });
     } catch (error) {
         console.error("Error updating student profile:", error);
-        res.status(500).json({ message: error.message });
+        const status = error?.name === "CastError" ? 400 : 500;
+        res.status(status).json({ message: error.message || "Failed to update student profile." });
     }
 };

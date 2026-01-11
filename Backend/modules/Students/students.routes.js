@@ -2,7 +2,7 @@ import { Router } from "express";
 import { registerStudent, verifyStudentEmail, loginStudent, getStudentProfile, updateStudentProfile } from "./students.controller.js";
 import { logout } from "../../shared/auth/auth.controller.js";
 import { authMiddleware } from "../../shared/middlewares/auth.middleware.js";
-import { upload } from "../../shared/middlewares/upload.middleware.js";
+import { uploadSingle } from "../../shared/middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -13,6 +13,6 @@ router.post("/logout", logout);
 
 router.route("/profile")
     .get(authMiddleware, getStudentProfile)
-    .patch(authMiddleware, upload.single('profileImage'), updateStudentProfile);
+    .patch(authMiddleware, uploadSingle("profileImage"), updateStudentProfile);
 
 export default router;

@@ -12,6 +12,10 @@ passport.use(
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
+                const email = profile?.emails?.[0]?.value;
+                if (!email) {
+                    return done(new Error("Google profile did not include an email"));
+                }
                 const { alumni, tokens } = await googleLogin(profile);
                 done(null, { alumni, tokens });
             } catch (error) {
@@ -20,11 +24,3 @@ passport.use(
         }
     )
 );
-
-passport.serializeUser((data, done) => {
-    done(null, data);
-});
-
-passport.deserializeUser((data, done) => {
-    done(null, data);
-});

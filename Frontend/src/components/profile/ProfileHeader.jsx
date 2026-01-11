@@ -3,7 +3,6 @@ import { ArrowLeft, User, Camera, Sun, Moon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const ProfileHeader = ({ 
-  user, 
   role, 
   theme, 
   toggleTheme, 

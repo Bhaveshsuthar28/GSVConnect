@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon -r dotenv/config --experimental-json-modules ./Server.js"
+    "dev": "nodemon -r dotenv/config --experimental-json-modules ./Server.js",
+    "start": "node ./Server.js"
   },
   "keywords": [],
   "author": "",

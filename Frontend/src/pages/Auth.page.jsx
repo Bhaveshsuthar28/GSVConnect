@@ -1,16 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { login, register, verifyOtp, clearError, setRole, resetRegistration } from '../redux/slices/authSlice';
+import { useAuth } from '../context/AuthContext.jsx';
 import { Eye, EyeOff, Mail, Lock, User, SquareDot, Sun, Moon, ArrowLeft } from 'lucide-react';
 import { ArrowRight } from 'lucide-react';
 import { BackgroundVideo } from '../components/video.background';
 
 const AuthPage = () => {
   const [view, setView] = useState('login'); // 'login', 'register', 'otp'
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { isLoading, error, isAuthenticated, registrationStep, lastRegisteredEmail, role } = useSelector((state) => state.auth);
+  const {
+    isLoading,
+    error,
+    setError,
+    isAuthenticated,
+    lastRegisteredEmail,
+    role,
+    setRole,
+    login,
+    register,
+    verifyOtp,
+  } = useAuth();
 
   // Theme State
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
@@ -45,30 +54,14 @@ const AuthPage = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  useEffect(() => {
-    if (view === 'register' && registrationStep === 'otp') {
-      setView((current) => current !== 'otp' ? 'otp' : current);
-    }
-    if (view === 'otp' && registrationStep === 'completed') {
-        if (isAuthenticated) {
-             dispatch(resetRegistration());
-        } else {
-            // Only set view if not already login to avoid loop/render warning
-            if (view !== 'login') setView('login');
-            dispatch(resetRegistration());
-            alert("Verification Successful! Please Login.");
-        }
-    }
-  }, [registrationStep, view, dispatch, isAuthenticated]);
-
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (error) dispatch(clearError());
+    if (error) setError(null);
     if (validationError) setValidationError(null);
   };
 
   const handleRoleChange = (selectedRole) => {
-    dispatch(setRole(selectedRole));
+    setRole(selectedRole);
     setValidationError(null);
     setFormData({
       name: '',
@@ -76,7 +69,7 @@ const AuthPage = () => {
       password: '',
       otp: ''
     });
-    if (error) dispatch(clearError());
+    if (error) setError(null);
   };
 
   const handleSubmit = (e) => {
@@ -97,11 +90,30 @@ const AuthPage = () => {
     }
 
     if (view === 'login') {
-      dispatch(login({ email: formData.email, password: formData.password, role }));
+      if (!role) {
+        setValidationError('Please select Student or Alumni.');
+        return;
+      }
+      login({ email: formData.email, password: formData.password, role }).catch(() => {});
     } else if (view === 'register') {
-      dispatch(register({ name: formData.name, email: formData.email, password: formData.password, role }));
+      if (!role) {
+        setValidationError('Please select Student or Alumni.');
+        return;
+      }
+      register({ name: formData.name, email: formData.email, password: formData.password, role })
+        .then(() => setView('otp'))
+        .catch(() => {});
     } else if (view === 'otp') {
-      dispatch(verifyOtp({ email: lastRegisteredEmail || formData.email, otp: formData.otp, role }));
+      if (!role) {
+        setValidationError('Please select Student or Alumni.');
+        return;
+      }
+      verifyOtp({ email: lastRegisteredEmail || formData.email, otp: formData.otp, role })
+        .then(() => {
+          setError(null);
+          setView('login');
+        })
+        .catch(() => {});
     }
   };
 
@@ -114,7 +126,11 @@ const AuthPage = () => {
     // Wait, the context showed alumni.routes has /google, student.routes currently DOES NOT. 
     // So if role is student, Google might not work or default to Alumni logic?
     // For now I'll point both to alumni or just handle generic google login.
-    // But backend redirect hardcodes /dashboard.
+    // But backend redirect hardcodes /dashboard (not used in SPA). Ensure links point to /profile.
+    if (!endpoint) {
+      setValidationError('Google login is not configured for this role.');
+      return;
+    }
     window.location.href = endpoint;
   };
 
@@ -154,7 +170,7 @@ const AuthPage = () => {
           <button
             onClick={() => {
                 setView(view === 'login' ? 'register' : 'login');
-                dispatch(clearError());
+                setError(null);
                 setValidationError(null);
                 setFormData({
                   name: '',

@@ -9,10 +9,16 @@ export default mongoose.model(
         phone: String,
         address: String,
         website: String,
+        portfolioUrl: String,
+        companyName: String,
         profileImage: String,
+        skills: {
+          type: [String],
+          default: [],
+        },
         password: { type: String, select: false },
         googleId: String,
-        isEmailVerified: Boolean,
+        isEmailVerified: { type: Boolean, default: false },
         verification: {
             status: {
                 type: String,
@@ -20,6 +26,7 @@ export default mongoose.model(
                 default: "pending",
             },
             linkedinUrl: String,
+          linkedinId: String,
             degree: String,
             graduationYear: Number,
             proofUrl: String,

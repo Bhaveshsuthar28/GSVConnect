@@ -1,17 +1,15 @@
 import { NavLink } from "react-router-dom";
-import { Moon, Sun, Menu, User as UserIcon, LogOut, UserCircle } from "lucide-react";
+import { Moon, Sun, Menu, User as UserIcon, LogOut, UserCircle, PenSquare } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { toggleTheme } from "../features/theme.js";
 import { MobileSidebar } from "./moblie.sidebar.jsx";
-import { useSelector, useDispatch } from 'react-redux';
-import { fetchProfile, logoutUser } from '../redux/slices/authSlice';
+import { useAuth } from "../context/AuthContext.jsx";
 
 const navLinks = [
   { name: "Home", path: "/" },
   { name: "Directory", path: "/directory" },
-  { name: "Events", path: "/events" }, 
-  { name: "Yearbook", path: "/yearbook" },
-  { name: "About", path: "/about" }
+  { name: "Events", path: "/events" },
+  { name: "About", path: "/about" },
 ];
 
 export const Navbar = () => {
@@ -22,94 +20,99 @@ export const Navbar = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
-  const dispatch = useDispatch();
+  const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated && !user) {
-        dispatch(fetchProfile());
-    }
-  }, [isAuthenticated, user, dispatch]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setShowDropdown(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const handleThemeToggle = () => {
     toggleTheme();
-    setIsDark((prev) => !prev);
+    setIsDark((p) => !p);
   };
-  
+
   const handleProfileClick = () => {
-    // If mobile/tablet (using simple width check or just rely on CSS visibility)
-    // Actually, we can just check window width or use logic: 
-    // "If sidebar is hidden (desktop), toggle dropdown. Else open sidebar".
-    // But easier: The icon in navbar is visible on all screens now. 
-    // On Mobile: Open Sidebar. On Desktop: Toggle Dropdown.
-    if (window.innerWidth < 1024) {
-        setOpen(true);
-    } else {
-        setShowDropdown(!showDropdown);
-    }
+    if (window.innerWidth < 1024) setOpen(true);
+    else setShowDropdown((p) => !p);
   };
 
   const handleLogout = () => {
-    dispatch(logoutUser());
+    logout();
     setShowDropdown(false);
   };
 
   return (
     <>
-      <nav className="fixed top-5 left-0 w-full z-40">
+      <nav className="fixed top-5 left-0 w-full z-40 dark:bg-transparent backdrop-blur">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
           {/* Logo */}
           <NavLink to="/" className="flex items-center gap-3">
             <img
-              src="https://upload.wikimedia.org/wikipedia/en/d/d2/Gati_Shakti_Vishwavidyalaya_Logo.png"
+              src={`${import.meta.env.VITE_IMAGEKIT_URL}/Gati_Shakti_Vishwavidyalaya_Logo.png`}
               alt="GSV Logo"
               className="w-10 h-10 object-contain"
             />
-            <div className="leading-tight">
-              <p className="text-white font-bold text-lg">
+            <div>
+              <p className="font-bold text-lg text-slate-900 dark:text-white">
                 GSVConnect
               </p>
-              <p className="text-white/80 text-xs">
+              <p className="text-xs text-slate-600 dark:text-white/80">
                 Gati Shakti Vishwavidyalaya
               </p>
             </div>
           </NavLink>
 
-
-          {/* Desktop Navigation (ONLY lg+) */}
-          <ul className="hidden lg:flex items-center gap-3 text-sm font-semibold text-white">
+          {/* Desktop Nav */}
+          <ul className="hidden lg:flex items-center gap-3 text-sm font-semibold">
             {navLinks.map((link) => (
               <li key={link.name}>
                 <NavLink
                   to={link.path}
                   className={({ isActive }) =>
-                    `
-                    px-4 py-2 rounded-full
-                    border border-white
-                    transition-all
-                    ${
-                      isActive
-                        ? "bg-white text-black"
-                        : "hover:bg-white hover:text-black"
-                    }
-                    `
+                    isActive
+                      ? "px-4 py-2 rounded-full bg-slate-900 text-white dark:bg-white dark:text-black"
+                      : "px-4 py-2 rounded-full border border-slate-300 text-slate-800 hover:bg-slate-200 transition dark:border-white/30 dark:text-white dark:hover:bg-white dark:hover:text-black"
                   }
                 >
                   {link.name}
                 </NavLink>
               </li>
             ))}
+            {isAuthenticated && (
+              <li>
+                <NavLink
+                  to="/stories"
+                  className={({ isActive }) =>
+                    isActive
+                      ? "px-4 py-2 rounded-full bg-slate-900 text-white dark:bg-white dark:text-black"
+                      : "px-4 py-2 rounded-full border border-slate-300 text-slate-800 hover:bg-slate-200 transition dark:border-white/30 dark:text-white dark:hover:bg-white dark:hover:text-black"
+                  }
+                >
+                  Stories
+                </NavLink>
+              </li>
+            )}
+            {isAuthenticated && (
+              <li>
+                <NavLink
+                  to="/jobs"
+                  className={({ isActive }) =>
+                    isActive
+                      ? "px-4 py-2 rounded-full bg-slate-900 text-white dark:bg-white dark:text-black"
+                      : "px-4 py-2 rounded-full border border-slate-300 text-slate-800 hover:bg-slate-200 transition dark:border-white/30 dark:text-white dark:hover:bg-white dark:hover:text-black"
+                  }
+                >
+                  Jobs
+                </NavLink>
+              </li>
+            )}
           </ul>
 
           {/* Actions */}
@@ -118,85 +121,73 @@ export const Navbar = () => {
             {/* Theme Toggle */}
             <button
               onClick={handleThemeToggle}
-              className="
-                w-10 h-10 rounded-full
-                border border-white
-                text-white
-                flex items-center justify-center
-                hover:bg-white hover:text-black
-                transition
-              "
               aria-label="Toggle theme"
+              className="w-10 h-10 rounded-full flex items-center justify-center transition border border-slate-300 text-slate-800 hover:bg-slate-200 dark:border-white/30 dark:text-white dark:hover:bg-white dark:hover:text-black"
             >
               {isDark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            {/* User Profile or Join Us */}
+            {/* Auth */}
             {isAuthenticated ? (
-                <div className="relative" ref={dropdownRef}>
-                    <div 
-                        onClick={handleProfileClick}
-                        className="flex items-center justify-center w-10 h-10 rounded-full bg-white lg:bg-white lg:text-black text-black font-bold border border-white cursor-pointer select-none overflow-hidden" 
-                        title={user?.name || "User"}
-                    >
-                        {user?.profileImage ? (
-                            <img 
-                                src={user.profileImage} 
-                                alt="Profile" 
-                                className="w-full h-full object-cover"
-                            />
-                        ) : (
-                            user?.name ? user.name.charAt(0).toUpperCase() : <UserIcon size={18} />
-                        )}
+              <div className="relative" ref={dropdownRef}>
+                <div
+                  onClick={handleProfileClick}
+                  className="w-10 h-10 rounded-full cursor-pointer overflow-hidden flex items-center justify-center font-bold bg-slate-900 text-white dark:bg-white dark:text-black"
+                >
+                  {user?.profileImage ? (
+                    <img
+                      src={user.profileImage}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    user?.name?.charAt(0).toUpperCase() || <UserIcon size={18} />
+                  )}
+                </div>
+
+                {showDropdown && (
+                  <div className="hidden lg:block absolute right-0 mt-3 w-48 rounded-xl shadow-xl overflow-hidden z-50 bg-white text-slate-900 border border-slate-200 dark:bg-slate-900 dark:text-white dark:border-slate-700">
+                    <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                      <p className="text-sm font-semibold truncate">
+                        {user?.name}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
+                        {user?.role}
+                      </p>
                     </div>
 
-                    {/* Desktop Dropdown */}
-                    {showDropdown && (
-                        <div className="hidden lg:block absolute right-0 mt-3 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 z-50">
-                            <div className="px-4 py-3 border-b border-gray-100">
-                                <p className="text-sm font-semibold text-gray-900 truncate">{user?.name || "User"}</p>
-                                <p className="text-xs text-gray-500 truncate capitalize">{user?.role || "Student"}</p>
-                            </div>
-                            <NavLink 
-                                to={user?.role === 'alumni' ? '/dashboard' : '/profile'} 
-                                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
-                                onClick={() => setShowDropdown(false)}
-                            >
-                                <UserCircle size={16} />
-                                Profile
-                            </NavLink>
-                            <button 
-                                onClick={handleLogout}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition text-left"
-                            >
-                                <LogOut size={16} />
-                                Logout
-                            </button>
-                        </div>
-                    )}
-                </div>
+                    <NavLink
+                      to="/profile"
+                      onClick={() => setShowDropdown(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      <UserCircle size={16} />
+                      Profile
+                    </NavLink>
+
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 text-left"
+                    >
+                      <LogOut size={16} />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
-                <NavLink
-                  to="/auth"
-                  className="
-                    hidden lg:inline-block
-                    px-5 py-2 rounded-full
-                    border border-white
-                    text-white font-semibold
-                    hover:bg-white hover:text-black
-                    transition
-                  "
-                >
-                  Join Us
-                </NavLink>
+              <NavLink
+                to="/auth"
+                className="hidden lg:inline-block px-5 py-2 rounded-full font-semibold transition border border-slate-300 text-slate-800 hover:bg-slate-200 dark:border-white/30 dark:text-white dark:hover:bg-white dark:hover:text-black"
+              >
+                Join Us
+              </NavLink>
             )}
 
-            {/* Hamburger (Mobile + Tablet) - Only show if NOT authenticated */}
             {!isAuthenticated && (
               <button
                 onClick={() => setOpen(true)}
-                className="lg:hidden text-white"
-                aria-label="Open menu"
+                className="lg:hidden text-slate-800 dark:text-white"
               >
                 <Menu size={26} />
               </button>
@@ -205,7 +196,6 @@ export const Navbar = () => {
         </div>
       </nav>
 
-      {/* Mobile / Tablet Sidebar */}
       <MobileSidebar open={open} onClose={() => setOpen(false)} />
     </>
   );

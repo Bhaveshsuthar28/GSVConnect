@@ -1,34 +1,34 @@
 import { NavLink } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
-import { logoutUser } from "../redux/slices/authSlice";
+import { useAuth } from "../context/AuthContext.jsx";
 import {
   Home,
   Users,
   CalendarDays,
-  BookOpen,
   Info,
   X,
-  User,
   LogOut,
-  UserCircle // Import new icons
+  UserCircle,
+  PenSquare,
+  Briefcase
 } from "lucide-react";
 
 const navLinks = [
   { name: "Home", path: "/", icon: Home },
   { name: "Directory", path: "/directory", icon: Users },
   { name: "Events", path: "/events", icon: CalendarDays },
-  { name: "Yearbook", path: "/yearbook", icon: BookOpen },
   { name: "About", path: "/about", icon: Info }
 ];
 
 export const MobileSidebar = ({ open, onClose }) => {
-  const { isAuthenticated, user } = useSelector((state) => state.auth);
-  const dispatch = useDispatch();
+  const { isAuthenticated, user, logout } = useAuth();
+  const links = isAuthenticated
+    ? [...navLinks, { name: "Stories", path: "/stories", icon: PenSquare }, { name: "Jobs", path: "/jobs", icon: Briefcase }]
+    : navLinks;
   
   if (!open) return null;
 
   const handleLogout = () => {
-    dispatch(logoutUser());
+    logout();
     onClose();
   };
 
@@ -55,11 +55,11 @@ export const MobileSidebar = ({ open, onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <img
-              src="https://upload.wikimedia.org/wikipedia/en/d/d2/Gati_Shakti_Vishwavidyalaya_Logo.png"
-              alt="GSV Logo"
-              className="w-9 h-9 rounded-full object-contain"
-            />
+              <img
+                src={`${import.meta.env.VITE_IMAGEKIT_URL}/Gati_Shakti_Vishwavidyalaya_Logo.png`}
+                alt="GSV Logo"
+                className="w-9 h-9 rounded-full object-contain"
+              />
             <div className="leading-tight">
               <p className="text-sm font-semibold text-gray-900">
                 GSVConnect
@@ -80,7 +80,7 @@ export const MobileSidebar = ({ open, onClose }) => {
 
         {/* Nav Items */}
         <nav className="flex flex-col gap-1 text-sm">
-          {navLinks.map(({ name, path, icon: Icon }) => (
+          {links.map(({ name, path, icon: Icon }) => (
             <NavLink
               key={name}
               to={path}
@@ -109,7 +109,7 @@ export const MobileSidebar = ({ open, onClose }) => {
             <>
               {/* Profile Link */}
               <NavLink
-                to={user?.role === 'alumni' ? '/dashboard' : '/profile'}
+                to={'/profile'}
                 onClick={onClose}
                 className={({ isActive }) =>
                     `

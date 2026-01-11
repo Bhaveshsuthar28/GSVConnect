@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "backend: start check",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"-e",
+				"import('./Server.js').then(()=>{console.log('backend start script imports ok');process.exit(0)}).catch((e)=>{console.error(e);process.exit(1)})"
+			],
+			"isBackground": false
+		}
+	]
+}

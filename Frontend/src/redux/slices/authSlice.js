@@ -216,7 +216,7 @@ const authSlice = createSlice({
             localStorage.setItem('userRole', action.payload.role);
         }
       })
-      .addCase(fetchProfile.rejected, (state, action) => {
+      .addCase(fetchProfile.rejected, (state) => {
           // If profile fetch fails (401), we are not authenticated.
           state.isAuthenticated = false;
           state.user = null;
