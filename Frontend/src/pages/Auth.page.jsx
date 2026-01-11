@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { Eye, EyeOff, Mail, Lock, User, SquareDot, Sun, Moon, ArrowLeft } from 'lucide-react';
 import { ArrowRight } from 'lucide-react';
 import { BackgroundVideo } from '../components/video.background';
+import toast from 'react-hot-toast';
 
 const AuthPage = () => {
   const [view, setView] = useState('login'); // 'login', 'register', 'otp'
@@ -84,20 +85,26 @@ const AuthPage = () => {
         const structureRegex = /^[a-zA-Z0-9.]+_[a-zA-Z]+\d{2}@gsv\.ac\.in$/;
 
         if (!email.endsWith(gsvDomain) || !structureRegex.test(email)) {
-            setValidationError("Invalid Student Email. Format expected: name_branchYear@gsv.ac.in (e.g. john_cse24@gsv.ac.in)");
-            return;
+          const message = "Invalid Student Email. Format expected: name_branchYear@gsv.ac.in (e.g. john_cse24@gsv.ac.in)";
+          setValidationError(message);
+          toast.error(message);
+          return;
         }
     }
 
     if (view === 'login') {
       if (!role) {
-        setValidationError('Please select Student or Alumni.');
+        const message = 'Please select Student or Alumni.';
+        setValidationError(message);
+        toast.error(message);
         return;
       }
       login({ email: formData.email, password: formData.password, role }).catch(() => {});
     } else if (view === 'register') {
       if (!role) {
-        setValidationError('Please select Student or Alumni.');
+        const message = 'Please select Student or Alumni.';
+        setValidationError(message);
+        toast.error(message);
         return;
       }
       register({ name: formData.name, email: formData.email, password: formData.password, role })
@@ -105,7 +112,9 @@ const AuthPage = () => {
         .catch(() => {});
     } else if (view === 'otp') {
       if (!role) {
-        setValidationError('Please select Student or Alumni.');
+        const message = 'Please select Student or Alumni.';
+        setValidationError(message);
+        toast.error(message);
         return;
       }
       verifyOtp({ email: lastRegisteredEmail || formData.email, otp: formData.otp, role })
@@ -128,7 +137,9 @@ const AuthPage = () => {
     // For now I'll point both to alumni or just handle generic google login.
     // But backend redirect hardcodes /dashboard (not used in SPA). Ensure links point to /profile.
     if (!endpoint) {
-      setValidationError('Google login is not configured for this role.');
+      const message = 'Google login is not configured for this role.';
+      setValidationError(message);
+      toast.error(message);
       return;
     }
     window.location.href = endpoint;
@@ -206,6 +217,7 @@ const AuthPage = () => {
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {validationError && <div className="text-red-600 dark:text-red-400 text-sm">{validationError}</div>}
             
             {view === 'register' && (
               <div>
@@ -288,7 +300,6 @@ const AuthPage = () => {
                 </label>
                 <div className="mt-1 relative rounded-xl">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            {validationError && <div className="text-red-600 dark:text-red-400 text-sm">{validationError}</div>}
                     <SquareDot className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                   </div>
                   <input

@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 
 const AuthContext = createContext(null);
 
-const apiBase = import.meta.env.VITE_BASE_URL || "http://localhost:2804/api/v1";
+const apiBase = import.meta.env.VITE_BASE_URL || "http://localhost:5000/api/v1";
 
 const api = axios.create({
   baseURL: apiBase,
@@ -124,6 +124,19 @@ export const AuthProvider = ({ children }) => {
       setLastRegisteredEmail(email);
       toast.success("OTP sent to your email");
     } catch (err) {
+      const message = err?.response?.data?.message || err?.message || "Registration failed";
+      const isOtpCooldown = /wait\s+before\s+requesting\s+another\s+otp/i.test(message);
+
+      // If an OTP was recently sent, allow the user to proceed to the OTP screen instead
+      // of blocking the flow.
+      if (isOtpCooldown) {
+        setRegistrationStep("otp");
+        setLastRegisteredEmail(email);
+        setError(message);
+        toast(message);
+        return;
+      }
+
       handleError(err, "Registration failed");
       throw err;
     } finally {
