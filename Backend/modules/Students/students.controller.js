@@ -5,6 +5,26 @@ import { generateTokens } from "../../shared/auth/token.js";
 import { imageKit } from "../../config/image.config.js";
 import { getAuthCookieOptions } from "../../shared/auth/cookies.js";
 
+const STUDENT_EMAIL_REGEX = /^[a-zA-Z0-9.]+_([a-zA-Z]+)(\d{2})@gsv\.ac\.in$/i;
+
+const parseStudentEmail = (rawEmail) => {
+    const email = String(rawEmail || "").trim();
+    if (!email) return { ok: false, message: "Email is required." };
+
+    const match = email.match(STUDENT_EMAIL_REGEX);
+    if (!match) {
+        return {
+            ok: false,
+            message: "Invalid student email format. Expected: name_branchYY@gsv.ac.in (e.g. john_cse24@gsv.ac.in)",
+        };
+    }
+
+    const branch = match[1];
+    const graduationYear = parseInt(`20${match[2]}`, 10);
+
+    return { ok: true, email, branch, graduationYear };
+};
+
 const normalizeValue = (value) => {
     if (value === undefined) return undefined;
     if (value === "") return null;
@@ -23,19 +43,13 @@ export const registerStudent = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
-        if (!email.endsWith("@gsv.ac.in")) {
-            return res.status(400).json({ message: "Only GSV email IDs are allowed for student registration." });
+        const parsed = parseStudentEmail(email);
+        if (!parsed.ok) {
+            return res.status(400).json({ message: parsed.message });
         }
 
-        const emailRegex = /_([a-zA-Z]+)(\d{2})@gsv\.ac\.in$/;
-        const match = email.match(emailRegex);
-
-        if (!match) {
-            return res.status(400).json({ message: "Invalid email format. Expected format: firstname.lastname_degreeYY@gsv.ac.in" });
-        }
-
-        const branch = match[1];
-        const graduationYear = parseInt(`20${match[2]}`, 10);
+        const branch = parsed.branch;
+        const graduationYear = parsed.graduationYear;
 
         const existingStudent = await Student.findOne({ email });
         if (existingStudent) {
@@ -58,7 +72,7 @@ export const registerStudent = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 12);
         await Student.create({
             name,
-            email,
+            email: parsed.email,
             password: hashedPassword,
             branch: branch,
             year: graduationYear,
@@ -71,6 +85,48 @@ export const registerStudent = async (req, res) => {
         const status = error?.status || 500;
         res.status(status).json({ message: status === 500 ? "Registration failed." : error.message });
     }
+};
+
+export const googleStudentLogin = async (profile) => {
+    const email = profile?.emails?.[0]?.value;
+    const parsed = parseStudentEmail(email);
+    if (!parsed.ok) {
+        const err = new Error(parsed.message);
+        err.status = 400;
+        throw err;
+    }
+
+    const displayName = profile?.displayName?.trim();
+    const given = profile?.name?.givenName;
+    const family = profile?.name?.familyName;
+    const name = displayName || `${given || ""} ${family || ""}`.trim() || parsed.email.split("@")[0];
+
+    let student = await Student.findOne({ email: parsed.email });
+    if (!student) {
+        student = await Student.create({
+            name,
+            email: parsed.email,
+            googleId: profile?.id,
+            isEmailVerified: true,
+            branch: parsed.branch,
+            year: parsed.graduationYear,
+        });
+    } else {
+        const update = {};
+        if (!student.isEmailVerified) update.isEmailVerified = true;
+        if (!student.googleId) update.googleId = profile?.id;
+        if (!student.branch) update.branch = parsed.branch;
+        if (!student.year) update.year = parsed.graduationYear;
+        if (!student.name && name) update.name = name;
+
+        if (Object.keys(update).length) {
+            student = await Student.findByIdAndUpdate(student._id, { $set: update }, { new: true });
+        }
+    }
+
+    const payload = { id: student._id, email: student.email, role: "student" };
+    const tokens = generateTokens(payload);
+    return { student, tokens };
 };
 
 export const verifyStudentEmail = async (req, res) => {

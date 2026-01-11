@@ -7,6 +7,7 @@ export default mongoose.model(
         name: String,
         email: { type: String, unique: true },
         password: { type: String, select: false },
+        googleId: String,
         isEmailVerified: { type: Boolean, default: false },
         branch: String,
         year: Number,
